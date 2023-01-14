@@ -54,7 +54,7 @@ namespace TimeTrackerApp
                 return new List<string>();
             }
             return File.ReadAllLines(path)
-                .Where(x => string.IsNullOrEmpty(args) ? true : args == Log.Parse(x).Name)
+                .Where(x => string.IsNullOrEmpty(args) ? true : Log.Parse(x).Name.Contains(args))
                 .ToList();
         }
         public void Reset()
