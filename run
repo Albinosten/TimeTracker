@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+./buildOutput/darwin_x64/TimeTracker
+
+#read command
+#if [[ $command  != "l" ]]; then
+#read name
+#./buildOutput/darwin_x64/TimeTracker $command $name
+#else 
+#./buildOutput/darwin_x64/TimeTracker $command 
+#fi

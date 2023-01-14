@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+
+dotnet publish --self-contained -r osx-x64 -c release -o buildOutput/darwin_x64 -p:PublishSingleFile=true
