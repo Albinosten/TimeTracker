@@ -19,3 +19,5 @@ Poor-ish performance. But it doesnt matter yet..
 ##### Future features
 
 Squash log-entries to minimize number of rows in log file.
+
+Show running time for uncompleted tasks.
