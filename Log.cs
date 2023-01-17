@@ -16,9 +16,18 @@ namespace TimeTrackerApp
         {
             return string.Join(", ", this.Name, (int)this.Action, this.StartTimestamp, this.StopTimestamp);
         }
+        public string DisplayReadable()
+        {
+            return string.Join(", "
+				, this.Name
+				//, this.Action
+                , DateTimeOffset.FromUnixTimeSeconds(this.StartTimestamp).LocalDateTime
+                , this.StopTimestamp == 0L ? "--:--:--" : DateTimeOffset.FromUnixTimeSeconds(this.StopTimestamp).LocalDateTime
+                );
+        }
         public TimeSpan GetTimeSpan()
         {
-            return DateTimeOffset.FromUnixTimeSeconds(this.StopTimestamp)
+            return DateTimeOffset.FromUnixTimeSeconds(this.StopTimestamp == 0L ? DateTimeOffset.Now.ToUnixTimeSeconds() : this.StopTimestamp)
                  - DateTimeOffset.FromUnixTimeSeconds(this.StartTimestamp);
         }
         public static Log Parse(string s)

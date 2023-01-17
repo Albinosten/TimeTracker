@@ -1,19 +1,26 @@
 using System.IO;
 using System.Linq;
 using System.Collections.Generic;
+using System;
 
 namespace TimeTrackerApp
 {
     public class FileHandler
     {
-        string path => "Log.csv";
+        static string path => "Log.csv";
+        
         public bool Create(Log line)
         {
             if(!File.Exists(path))
             {
                 File.Create(path).Close();
             }
-            var logs = this.GetAllLogs(line.Name);
+            var request = new CommandRequest()
+            {
+                Arg = line.Name,
+                ExactSearch = true,
+            };
+            var logs = this.GetAllLogs(request);
             if(!logs.Any(x => x.Action == Action.Start))
             {
                 var file = File.Open(path, FileMode.Append);
@@ -27,35 +34,46 @@ namespace TimeTrackerApp
             }
             return false;
         }
-
         public void Delete(Log log)
         {
             if(!File.Exists(path))
             {
                 File.Create(path).Close();
             }
-            var a = this.GetAllLogs(null)
+            var a = this.GetAllLogs(new CommandRequest())
                 .Where(l => !l.Equals(log))
                 .Select(x => x.ToString())
                 .ToList();
             File.WriteAllLines(path, a
                 );
         }
-        public IList<Log> GetAllLogs(string args)
+        public IList<Log> GetAllLogs(ICommandRequest request)
         {
-            return this.GetAllLines(args)
+            return this.GetAllLines(request)
                 .Select(x => Log.Parse(x))
                 .ToList();
         }
-        public IList<string> GetAllLines(string args)
+        public IList<string> GetAllLines(ICommandRequest request)
         {
             if(!File.Exists(path))
             {
                 return new List<string>();
             }
             return File.ReadAllLines(path)
-                .Where(x => string.IsNullOrEmpty(args) ? true : Log.Parse(x).Name.Contains(args))
+                .Where(x => Filter(request, x))
                 .ToList();
+        }
+        private static bool Filter(ICommandRequest request, string line) 
+        {
+			if (!string.IsNullOrEmpty(request.Arg)) 
+            {
+				if (request.ExactSearch) 
+                {
+                    return Log.Parse(line).Name.ToUpper() == request.Arg.ToUpper();
+                }
+                return Log.Parse(line).Name.ToUpper().Contains(request.Arg.ToUpper());
+            }
+            return true;
         }
         public void Reset()
         {
