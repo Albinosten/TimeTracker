@@ -18,11 +18,13 @@ namespace TimeTrackerApp
         }
         public string DisplayReadable()
         {
+            var startDate = DateTimeOffset.FromUnixTimeSeconds(this.StartTimestamp).LocalDateTime;
+            var stopDate = DateTimeOffset.FromUnixTimeSeconds(this.StopTimestamp).LocalDateTime;
             return string.Join(", "
 				, this.Name
 				//, this.Action
-                , DateTimeOffset.FromUnixTimeSeconds(this.StartTimestamp).LocalDateTime
-                , this.StopTimestamp == 0L ? "--:--:--" : DateTimeOffset.FromUnixTimeSeconds(this.StopTimestamp).LocalDateTime
+                , $"{startDate:MMM-dd}"
+                , this.StopTimestamp == 0L ? "--:--:--" : $"{stopDate:MMM-dd}"
                 );
         }
         public TimeSpan GetTimeSpan()

@@ -4,7 +4,7 @@ namespace TimeTrackerApp
 {
 	public static class PrintWithColor
 	{
-		public static void PrintLine(string text, ConsoleColor background = ConsoleColor.Black, ConsoleColor foreground = ConsoleColor.White)
+		public static void WriteLine(string text, ConsoleColor background = ConsoleColor.Black, ConsoleColor foreground = ConsoleColor.White)
 		{
 			Console.BackgroundColor = background;
 			Console.ForegroundColor = foreground;
@@ -12,7 +12,7 @@ namespace TimeTrackerApp
 			Console.BackgroundColor = ConsoleColor.Black;
 			Console.ForegroundColor = ConsoleColor.White;
 		}
-		public static void Print(string text, ConsoleColor background = ConsoleColor.Black, ConsoleColor foreground = ConsoleColor.White)
+		public static void Write(string text, ConsoleColor background = ConsoleColor.Black, ConsoleColor foreground = ConsoleColor.White)
 		{
 			Console.BackgroundColor = background;
 			Console.ForegroundColor = foreground;
