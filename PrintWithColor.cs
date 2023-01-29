@@ -9,16 +9,14 @@ namespace TimeTrackerApp
 			Console.BackgroundColor = background;
 			Console.ForegroundColor = foreground;
 			Console.WriteLine(text);
-			Console.BackgroundColor = ConsoleColor.Black;
-			Console.ForegroundColor = ConsoleColor.White;
+			Console.ResetColor();
 		}
 		public static void Write(string text, ConsoleColor background = ConsoleColor.Black, ConsoleColor foreground = ConsoleColor.White)
 		{
 			Console.BackgroundColor = background;
 			Console.ForegroundColor = foreground;
 			Console.Write(text);
-			Console.BackgroundColor = ConsoleColor.Black;
-			Console.ForegroundColor = ConsoleColor.White;
+			Console.ResetColor();
 		}
 	}
 }

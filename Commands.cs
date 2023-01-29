@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Collections.Generic;
+using System.Threading;
 
 namespace TimeTrackerApp
 {
@@ -11,6 +12,7 @@ namespace TimeTrackerApp
 	}
 	public class Start : ICommandWithArg
 	{
+		public int TimeoutTime => TimeTracker.NormalTimeoutTime;
 		public bool Execute(ICommandRequest request) 
 		{
 			var fileHandler = new FileHandler();
@@ -32,10 +34,13 @@ namespace TimeTrackerApp
 	   public bool Execute()
 	   {
 			PrintWithColor.WriteLine("Start name: ");
-			var request = new CommandRequest() { Arg = Console.ReadLine() };
+			var request = new CommandRequest() 
+			{
+				Arg = InteruptableReader.ReadLine(),
+				ExactSearch = true,
+			};
 			if (string.IsNullOrEmpty(request.Arg)) 
 			{
-				//throw new Exception("Must set a name")
 				PrintWithColor.WriteLine("Must set a name");
 				return true;
 			};
@@ -46,9 +51,11 @@ namespace TimeTrackerApp
 	}
 	public class Stop : ICommand
 	{
+		public int TimeoutTime => TimeTracker.NormalTimeoutTime;
+
 		private int number => 99;
-	   public bool Execute()
-	   {
+		public bool Execute()
+		{
 		   PrintWithColor.WriteLine("Stop: ");
 			var fileHandler = new FileHandler();
 			var logs = fileHandler
@@ -66,7 +73,7 @@ namespace TimeTrackerApp
 			}
 			PrintWithColor.WriteLine("x for cancel", ConsoleColor.DarkRed);
 
-			var input = Console.ReadLine();
+			var input = InteruptableReader.ReadLine();
 			if (int.TryParse(input, out int index)
 				&& index < Math.Min(number, logs.Count)
 				&& index >= 0
@@ -92,6 +99,7 @@ namespace TimeTrackerApp
 	}
 	public class List : ICommandWithArg
 	{
+		public virtual int TimeoutTime => Timeout.Infinite;
 		protected IEnumerable<Log> GetLogs(ICommandRequest request)
 		{
 			var fileHandler = new FileHandler();
@@ -117,7 +125,7 @@ namespace TimeTrackerApp
 			PrintWithColor.WriteLine("Name: ");
 			var request = new CommandRequest()
 			{
-				Arg = Console.ReadLine(),
+				Arg = InteruptableReader.ReadLine(),
 			};
 			this.Execute(request);
 			return true;
@@ -125,7 +133,8 @@ namespace TimeTrackerApp
 	}
 	public class ListActive : List
 	{
-	   public override bool Execute()
+		public override int TimeoutTime => TimeTracker.NormalTimeoutTime;
+		public override bool Execute()
 	   {
 			var lines = this.GetLogs(new CommandRequest())
 				.Where(x => x.Action == Action.Start)
@@ -137,11 +146,12 @@ namespace TimeTrackerApp
 
 	public class GetTimePerDay : ICommand
 	{
+		public int TimeoutTime => Timeout.Infinite;
 		private static int StartNumber => 7;
 		public bool Execute()
 		{
 			PrintWithColor.WriteLine("Number of days: ");
-			_ = int.TryParse(Console.ReadLine(), out int number);
+			_ = int.TryParse(InteruptableReader.ReadLine(), out int number);
 			number = number == 0 ? StartNumber: number;
 
 			var groupedByDay = new FileHandler()
@@ -176,6 +186,7 @@ namespace TimeTrackerApp
 
 	public class GetTime : ICommand
 	{
+		public int TimeoutTime => Timeout.Infinite;
 		public bool Execute()
 		{
 			PrintWithColor.WriteLine("Get time: ");
@@ -184,7 +195,7 @@ namespace TimeTrackerApp
 
 			var request = new CommandRequest()
 			{
-				Arg = Console.ReadLine(),
+				Arg = InteruptableReader.ReadLine(),
 			};
 			var allLogs = fileHandler
 				.GetAllLogs(request);
@@ -203,7 +214,7 @@ namespace TimeTrackerApp
 				{
 					foreach(var log in group)
 					{
-						PrintWithColor.WriteLine(log.DisplayReadable() + " time: " + log.GetTimeSpan()
+						PrintWithColor.WriteLine(log.DisplayReadable(x => x.Name, x => x.StartTime, x => x.StopTime) + " time: " + log.GetTimeSpan()
 							, background: log.Action == Action.Start ? ConsoleColor.Blue : default);
 					}
 
@@ -232,13 +243,14 @@ namespace TimeTrackerApp
 
 	public class Rename : ICommand
 	{
+		public int TimeoutTime => Timeout.Infinite;
 		private int number => 99;
 		public bool Execute()
 		{
 			var fileHandler = new FileHandler();
 			PrintWithColor.WriteLine("Rename entry:");
 			var logs = fileHandler
-				.GetAllLogs(new CommandRequest() { Arg = Console.ReadLine() })
+				.GetAllLogs(new CommandRequest() { Arg = InteruptableReader.ReadLine() })
 				.GroupBy(x => x.Name)
 				.TakeLast(number)
 				.ToList();
@@ -249,48 +261,49 @@ namespace TimeTrackerApp
 					, background: logs[i].Any(x => x.Action == Action.Start) ? ConsoleColor.Blue : default);
 			}
 			PrintWithColor.WriteLine("Any key to return.", ConsoleColor.DarkRed);
-			if (int.TryParse(Console.ReadLine(), out int index)
+			if (int.TryParse(InteruptableReader.ReadLine(), out int index)
 				&& index < Math.Min(number, logs.Count)
 				&& index >= 0
 				)
 			{
 				PrintWithColor.WriteLine("New name:");
-				var newName = Console.ReadLine();
+				var newName = InteruptableReader.ReadLine();
 				if (string.IsNullOrEmpty(newName))
 				{
 					PrintWithColor.WriteLine("Must set a name");
 					return true;
 				};
-
-				fileHandler.Delete(logs[index].ToList());
-				foreach (var log in logs[index])
+				var logsToRename = logs[index].ToList();
+				fileHandler.Delete(logsToRename);
+				foreach (var log in logsToRename)
 				{
 					log.Name = newName;
 				}
-				fileHandler.Create(logs[index].ToList());
+				fileHandler.Create(logsToRename);
 			}
 			return true;
 		}
 	}
-	public class Remove : ICommand
+	public class Delete : ICommand
 	{
+		public int TimeoutTime => Timeout.Infinite;
 		private int number => 99;
 		public bool Execute()
 		{
 			var fileHandler = new FileHandler();
 			PrintWithColor.WriteLine("Remove entry with name:");
 			var logs = fileHandler
-				.GetAllLogs(new CommandRequest() { Arg = Console.ReadLine() })
+				.GetAllLogs(new CommandRequest() { Arg = InteruptableReader.ReadLine() })
 				.TakeLast(number)
 				.ToList();
 
 			for (int i = 0; i < Math.Min(number, logs.Count); i++)
 			{
-				PrintWithColor.WriteLine(i + " : " + logs[i]
+				PrintWithColor.WriteLine(i + " : " + logs[i].DisplayReadable()
 					, background: logs[i].Action == Action.Start ? ConsoleColor.Blue : default);
 			}
 			PrintWithColor.WriteLine("Any key to return.", ConsoleColor.DarkRed);
-			if (int.TryParse(Console.ReadLine(), out int index)
+			if (int.TryParse(InteruptableReader.ReadLine(), out int index)
 				&& index < Math.Min(number, logs.Count)
 				&& index >= 0
 				)
@@ -302,7 +315,8 @@ namespace TimeTrackerApp
 	}
 	public class Reset : ICommand
 	{
-	   public bool Execute()
+		public int TimeoutTime => Timeout.Infinite;
+		public bool Execute()
 	   {
 		   
 			PrintWithColor.WriteLine("Sure to delete all? type yes to accept");
@@ -317,6 +331,7 @@ namespace TimeTrackerApp
 	}
 	public class RestartRecent : ICommand
 	{
+		public int TimeoutTime => Timeout.Infinite;
 		static int number => 25;
 		public bool Execute()
 		{
@@ -332,7 +347,7 @@ namespace TimeTrackerApp
 			{
 				PrintWithColor.WriteLine(i + " : " + logs[i].Key);
 			}
-			if(int.TryParse(Console.ReadLine(), out int index) 
+			if(int.TryParse(InteruptableReader.ReadLine(), out int index) 
 				&& index < Math.Min(logs.Count, number) 
 				&& index >= 0
 				)
@@ -348,8 +363,103 @@ namespace TimeTrackerApp
 			return true;
 		}
 	}
+	public class CreateNewHistoric : ICommand
+	{
+		public int TimeoutTime => Timeout.Infinite;
+		
+		public bool Execute()
+		{
+			PrintWithColor.WriteLine("Start name: ");
+			var name = InteruptableReader.ReadLine();
+			if (string.IsNullOrEmpty(name))
+			{
+				PrintWithColor.WriteLine("Must set a name");
+				return true;
+			};
+
+			PrintWithColor.WriteLine("Minutes: ");
+			var input = InteruptableReader.ReadLine();
+			if (!int.TryParse(input, out var minutes))
+			{
+				PrintWithColor.WriteLine("Invalid");
+				return true;
+			};
+
+
+			var time = (DateTimeOffset) DateTime.Today.AddHours(3);
+			var log = new Log
+			{
+				StartTimestamp = time.ToUnixTimeSeconds(),
+				StopTimestamp = time.ToUnixTimeSeconds() + minutes * 60,
+				Action = Action.Stop,
+				Name = name,
+			};
+			
+			var fileHandler = new FileHandler();
+			fileHandler.Create(log);
+			Console.Clear();
+
+			var list = new List();
+			list.Execute(new CommandRequest {Arg = name, ExactSearch = true });
+
+			return true;
+		}
+	}
+	public class Merge : ICommand
+	{
+		public int TimeoutTime => Timeout.Infinite;
+		private static int number => 25;
+		public bool Execute()
+		{
+			var fileHandler = new FileHandler();
+			var logs = fileHandler
+				.GetAllLogs(new CommandRequest())
+				.GroupBy(x => x.Name)
+				.TakeLast(number)
+				.OrderByDescending(x => x.Max(mbox => mbox.StartTimestamp))
+				.ToList();
+
+			PrintWithColor.WriteLine("Merge names");
+
+			for (int i = 0; i < Math.Min(logs.Count, number); i++)
+			{
+				PrintWithColor.WriteLine(i + " : " + logs[i].Key);
+			}
+
+			if (int.TryParse(InteruptableReader.ReadLine(), out int targetIndex)
+				&& targetIndex < Math.Min(logs.Count, number)
+				&& targetIndex >= 0
+				)
+			{
+				Console.Clear();
+				PrintWithColor.WriteLine(targetIndex.ToString());
+				for (int i = 0; i < Math.Min(logs.Count, number); i++)
+				{
+					if(i != targetIndex)
+					{
+						PrintWithColor.WriteLine(i + " : " + logs[i].Key);
+					}
+				}
+
+				if (int.TryParse(InteruptableReader.ReadLine(), out int sourceIndex)
+				&& sourceIndex < Math.Min(logs.Count, number)
+				&& sourceIndex >= 0
+				)
+				{
+					fileHandler.Delete(logs[targetIndex]);
+					foreach(var log in logs[targetIndex])
+					{
+						log.Name = logs[sourceIndex].Key;
+					}
+					fileHandler.Create(logs[targetIndex]);
+				}
+			}
+			return true;
+		}
+	}
 	public class Invalid : ICommand
 	{
+		public int TimeoutTime => Timeout.Infinite;
 		public bool Execute()
 		{
 			PrintWithColor.WriteLine("Invalid operation");
@@ -358,6 +468,7 @@ namespace TimeTrackerApp
 	}
 	public class Exit : ICommand
 	{
+		public int TimeoutTime => Timeout.Infinite;
 		public bool Execute()
 		{
 			return false;

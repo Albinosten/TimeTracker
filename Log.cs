@@ -1,4 +1,6 @@
 using System;
+using System.Linq;
+
 namespace TimeTrackerApp
 {
 	public enum Action
@@ -10,31 +12,39 @@ namespace TimeTrackerApp
 	{
 		public Action Action;
 		public string Name;
+		
 		public long StartTimestamp;
+		public string StartDate => $"{DateTimeOffset.FromUnixTimeSeconds(this.StartTimestamp).LocalDateTime:MMM-dd}";
+		public string StartTime=> $"{DateTimeOffset.FromUnixTimeSeconds(this.StartTimestamp).LocalDateTime:HH:mm:ss}";
+		
 		public long StopTimestamp;
+		public string StopDate => this.StopTimestamp == 0L ? "--:--" : $"{DateTimeOffset.FromUnixTimeSeconds(this.StopTimestamp).LocalDateTime:MMM-dd}";
+		public string StopTime => this.StopTimestamp == 0L ? "--:--:--" : $"{DateTimeOffset.FromUnixTimeSeconds(this.StopTimestamp).LocalDateTime:HH:mm:ss}";
+
 		public override string ToString()
 		{
 			return string.Join(", ", this.Name, (int)this.Action, this.StartTimestamp, this.StopTimestamp);
 		}
 		public string DisplayReadable(bool showAction = false)
 		{
-			var startDate = DateTimeOffset.FromUnixTimeSeconds(this.StartTimestamp).LocalDateTime;
-			var stopDate = DateTimeOffset.FromUnixTimeSeconds(this.StopTimestamp).LocalDateTime;
-
 			if (showAction)
 			{
 				return string.Join(", "
 				, this.Name
 				, this.Action
-				, $"{startDate:MMM-dd}"
-				, this.StopTimestamp == 0L ? "--:--:--" : $"{stopDate:MMM-dd}"
+				, $"{this.StartDate} {this.StartTime}"
+				, this.StopTimestamp == 0L ? "--:--:--" : StopDate
 				);
 			}
 			return string.Join(", "
 				, this.Name
-				, $"{startDate:MMM-dd}"
-				, this.StopTimestamp == 0L ? "--:--:--" : $"{stopDate:MMM-dd}"
+				, $"{this.StartDate} {this.StartTime}"
+				, this.StopTimestamp == 0L ? "--:--:--" : $"{this.StopDate} {this.StopTime}"
 				);
+		}
+		public string DisplayReadable(params Func<Log,object>[] properties)
+		{
+			return string.Join(", ", properties.Select(x => x.Invoke(this)));
 		}
 		public TimeSpan GetTimeSpan()
 		{

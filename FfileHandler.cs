@@ -41,13 +41,16 @@ namespace TimeTrackerApp
 			}
 			return false;
 		}
+		public bool Create(IEnumerable<Log> logs)
+		{
+			return this.Create(logs.ToList());
+		}
 		public bool Create(Log line)
 		{
 			return this.Create(new[] { line });
 		}
 		public void Delete(IList<Log> logs)
 		{
-
 			if (!File.Exists(path))
 			{
 				File.Create(path).Close();
@@ -58,6 +61,10 @@ namespace TimeTrackerApp
 				.ToList();
 			File.WriteAllLines(path, a
 				);
+		}
+		public void Delete(IEnumerable<Log> log)
+		{
+			this.Delete(log.ToList());
 		}
 		public void Delete(Log log)
 		{
