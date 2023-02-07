@@ -13,11 +13,14 @@ Multiple timers at once
 
 Get total time grouped on task name
 
-Poor-ish performance. But it doesnt matter yet..
+Get total time grouped per Day
 
+Show running time for uncompleted tasks.
+
+Delete/Rename/Merge Logs
+
+Create new historical Logs
 
 ##### Future features
 
 Squash log-entries to minimize number of rows in log file.
-
-Show running time for uncompleted tasks.
