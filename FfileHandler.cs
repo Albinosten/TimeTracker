@@ -8,8 +8,7 @@ namespace TimeTrackerApp
 	public class FileHandler
 	{
 		static string path => Location + name;
-		public static string Location => "";
-		// public static string Location => "C:\\src\\Files\\";
+		public static string Location => Directory.GetCurrentDirectory() + "/Files/";
 		static string name => "Log.csv";
 
 		/// <summary>
@@ -25,7 +24,7 @@ namespace TimeTrackerApp
 			}
 			var request = new CommandRequest()
 			{
-				Arg = lines[0].Name,
+				Arg = lines.FirstOrDefault()?.Name ?? "",
 				ExactSearch = true,
 			};
 			var logs = this.GetAllLogs(request);
@@ -129,7 +128,7 @@ namespace TimeTrackerApp
 		}
 		public List<string> GetAllFiles()
 		{
-			return Directory.GetFiles(Location).ToList();
+			return Directory.GetFiles(string.IsNullOrEmpty(Location) ? Directory.GetCurrentDirectory() : Location).ToList();
 		}
 		public long GetFileSize(string fileName)
 		{
@@ -147,9 +146,9 @@ namespace TimeTrackerApp
 					.ReadAllLines(Location + restoreFrom)
 					.Select(Log.Parse)
 					.ToList();
-					this.Reset();
-					this.Create(allLines);
-					PrintWithColor.WriteLine("Restored from: " + restoreFrom);
+                this.Reset();
+                this.Create(allLines);
+                PrintWithColor.WriteLine("Restored from: " + restoreFrom);
 			}
 			catch
 			{

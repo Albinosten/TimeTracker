@@ -295,3 +295,5 @@ __pycache__/
 *.odx.cs
 *.xsd.cs
 Log.csv
+.DS_Store
+*.csv

@@ -422,10 +422,14 @@ namespace TimeTrackerApp
 
 			PrintWithColor.WriteLine("Restore from:");
 			int maxWidth = files.Max(x => x.Length);
+
+
+			var header = "Filename" + new string(' ', (maxWidth - 8) + 1);
+			PrintWithColor.WriteLine($"{"Nr",2} | " + String.Format($"{header}| {"Size",4} KB"));
 			for (int i  = 0; i < files.Count; i++)
 			{
-				var padding = new string(' ', (maxWidth - files[i].Length) + 1);
-				PrintWithColor.WriteLine($"{i} : " + String.Format($"{files[i] + padding}|{filehandler.GetFileSize(files[i])/1000,4} KB"));
+				var fileName = files[i] + new string(' ', (maxWidth - files[i].Length) + 1);
+				PrintWithColor.WriteLine($"{i,2} | " + String.Format($"{fileName}|{filehandler.GetFileSize(files[i])/1000,4} KB"));
 			}
 			PrintWithColor.WriteLine("X for cancel", ConsoleColor.DarkRed);
 
