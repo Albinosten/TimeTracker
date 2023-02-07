@@ -135,7 +135,7 @@ namespace TimeTrackerApp
 			{
 				PrintWithColor.Write(log.DisplayReadable());
 				PrintWithColor.WriteLine(" time: " + log.GetTimeSpan()
-					, background: log.Action == Action.Start ? ConsoleColor.Blue : default);
+					, background: log.Action == Action.Start ? ConsoleColor.Blue : null);
 			}
 			PrintWithColor.WriteLine("Count: " + logs.Count);
 		}
@@ -225,7 +225,7 @@ namespace TimeTrackerApp
 						.Sum(x => x.TotalMinutes));
 
 					PrintWithColor.WriteLine(name.First().Name + " time: " + totalTimePerName
-						, background: name.Any(x => x.Action == Action.Start) ? ConsoleColor.Blue : default);
+						, background: name.Any(x => x.Action == Action.Start) ? ConsoleColor.Blue : null);
 				}
 				var totalTime = TimeSpan.FromMinutes(day
 						.Select(x => x.GetTimeSpan())
@@ -272,7 +272,7 @@ namespace TimeTrackerApp
 					foreach (var log in group)
 					{
 						PrintWithColor.WriteLine(log.DisplayReadable(x => x.Name, x => x.StartTime, x => x.StopTime) + " time: " + log.GetTimeSpan()
-							, background: log.Action == Action.Start ? ConsoleColor.Blue : default);
+							, background: log.Action == Action.Start ? ConsoleColor.Blue : null);
 					}
 
 					if (groupPerDay.Count > 1)
@@ -317,7 +317,7 @@ namespace TimeTrackerApp
 			for (int i = 0; i < Math.Min(number, logs.Count); i++)
 			{
 				PrintWithColor.WriteLine(i + " : " + logs[i].Key
-					, background: logs[i].Any(x => x.Action == Action.Start) ? ConsoleColor.Blue : default);
+					, background: logs[i].Any(x => x.Action == Action.Start) ? ConsoleColor.Blue : null);
 			}
 			PrintWithColor.WriteLine("Any key to return.", ConsoleColor.DarkRed);
 			if (int.TryParse(InteruptableReader.ReadLine(), out int index)
@@ -360,7 +360,7 @@ namespace TimeTrackerApp
 			for (int i = 0; i < Math.Min(number, logs.Count); i++)
 			{
 				PrintWithColor.Write(i + " : " + logs[i].DisplayReadable());
-				PrintWithColor.WriteLine(" time: " + logs[i].GetTimeSpan(), background: logs[i].Action == Action.Start ? ConsoleColor.Blue : default);
+				PrintWithColor.WriteLine(" time: " + logs[i].GetTimeSpan(), background: logs[i].Action == Action.Start ? ConsoleColor.Blue : null);
 			}
 			PrintWithColor.WriteLine("Any key to return.", ConsoleColor.DarkRed);
 			if (int.TryParse(InteruptableReader.ReadLine(), out int index)
