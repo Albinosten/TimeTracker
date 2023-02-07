@@ -1,13 +1,17 @@
 using System.IO;
 using System.Linq;
 using System.Collections.Generic;
+using System;
 
 namespace TimeTrackerApp
 {
 	public class FileHandler
 	{
-		static string path => "Log.csv";
-		
+		static string path => Location + name;
+		public static string Location => "";
+		// public static string Location => "C:\\src\\Files\\";
+		static string name => "Log.csv";
+
 		/// <summary>
 		/// Only possible to set one name
 		/// </summary>
@@ -25,21 +29,18 @@ namespace TimeTrackerApp
 				ExactSearch = true,
 			};
 			var logs = this.GetAllLogs(request);
-			if (!logs.Any(x => x.Action == Action.Start))
+			
+			var file = File.Open(path, FileMode.Append);
+			var streamWriter = new StreamWriter(file);
+
+			foreach(var line in lines)
 			{
-				var file = File.Open(path, FileMode.Append);
-				var streamWriter = new StreamWriter(file);
-
-				foreach(var line in lines)
-				{
-					streamWriter.WriteLine(line);
-				}
-
-				streamWriter.Close();
-				file.Close();
-				return true;
+				streamWriter.WriteLine(line);
 			}
-			return false;
+
+			streamWriter.Close();
+			file.Close();
+			return true;
 		}
 		public bool Create(IEnumerable<Log> logs)
 		{
@@ -103,6 +104,56 @@ namespace TimeTrackerApp
 			if(File.Exists(path))
 			{
 				File.Delete(path);
+			}
+		}
+		public string Backup()
+		{
+			var newName = Location +  "Log " + $"{DateTimeOffset.Now.LocalDateTime:yyyy-MM-dd HH-mm-ss}" +  ".csv";
+			if (!File.Exists(newName))
+			{
+				File.Create(newName).Close();
+			}
+			var allRows = this.GetAllLines(new CommandRequest());
+			
+			var file = File.Open(newName, FileMode.Append);
+			var streamWriter = new StreamWriter(file);
+
+			foreach (var line in allRows)
+			{
+				streamWriter.WriteLine(line);
+			}
+
+			streamWriter.Close();
+			file.Close();
+			return newName;
+		}
+		public List<string> GetAllFiles()
+		{
+			return Directory.GetFiles(Location).ToList();
+		}
+		public long GetFileSize(string fileName)
+		{
+			if (File.Exists(Location + fileName))
+			{
+				return new FileInfo(Location + fileName).Length;
+			}
+			return 0;
+		}
+		public void Restore(string restoreFrom)
+		{
+			try
+			{
+				var allLines = File
+					.ReadAllLines(Location + restoreFrom)
+					.Select(Log.Parse)
+					.ToList();
+					this.Reset();
+					this.Create(allLines);
+					PrintWithColor.WriteLine("Restored from: " + restoreFrom);
+			}
+			catch
+			{
+				PrintWithColor.WriteLine("Could not restore from: " + restoreFrom);
 			}
 		}
 	}

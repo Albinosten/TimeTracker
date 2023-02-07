@@ -1,7 +1,7 @@
 using System;
 using System.Linq;
 using System.Collections.Generic;
-using System.Threading;
+using System.Globalization;
 
 namespace TimeTrackerApp
 {
@@ -10,10 +10,33 @@ namespace TimeTrackerApp
 		public string Arg { get; set; }
 		public bool ExactSearch { get; set; }
 	}
+	public enum CommandNumbers
+	{
+		Invalid = -1,
+		Start = 1,
+		Stop = 2,
+		List = 3,
+		Active = 4,
+		GetTime = 5,
+		Day = 6,
+		Restart = 7,
+		Commands = 9,
+		Restore = 89,
+		Backup = 90,
+		Week = 91,
+		Merge = 92,
+		NewHistoric = 95,
+		Rename = 96,
+		Delete = 97,
+		Reset = 98,
+		Exit = 99,
+	}
 	public class Start : ICommandWithArg
 	{
-		public int TimeoutTime => TimeTracker.NormalTimeoutTime;
-		public bool Execute(ICommandRequest request) 
+		public IList<string> Aliases => EmptyList.List;
+		public int CommandNumber => (int)CommandNumbers.Start;
+
+		public bool Execute(ICommandRequest request)
 		{
 			var fileHandler = new FileHandler();
 
@@ -31,15 +54,15 @@ namespace TimeTrackerApp
 
 			return true;
 		}
-	   public bool Execute()
-	   {
+		public bool Execute()
+		{
 			PrintWithColor.WriteLine("Start name: ");
-			var request = new CommandRequest() 
+			var request = new CommandRequest()
 			{
 				Arg = InteruptableReader.ReadLine(),
 				ExactSearch = true,
 			};
-			if (string.IsNullOrEmpty(request.Arg)) 
+			if (string.IsNullOrEmpty(request.Arg))
 			{
 				PrintWithColor.WriteLine("Must set a name");
 				return true;
@@ -47,16 +70,16 @@ namespace TimeTrackerApp
 			this.Execute(request);
 
 			return true;
-	   }
+		}
 	}
 	public class Stop : ICommand
 	{
-		public int TimeoutTime => TimeTracker.NormalTimeoutTime;
-
-		private int number => 99;
+		public int CommandNumber => (int)CommandNumbers.Stop;
+		private int number => 100; 
+		public IList<string> Aliases => EmptyList.List;
 		public bool Execute()
 		{
-		   PrintWithColor.WriteLine("Stop: ");
+			PrintWithColor.WriteLine("Stop: ");
 			var fileHandler = new FileHandler();
 			var logs = fileHandler
 				.GetAllLogs(new CommandRequest())
@@ -95,11 +118,12 @@ namespace TimeTrackerApp
 			}
 
 			return true;
-	   }
+		}
 	}
 	public class List : ICommandWithArg
 	{
-		public virtual int TimeoutTime => Timeout.Infinite;
+		public virtual int CommandNumber => (int)CommandNumbers.List;
+		public virtual IList<string> Aliases => new[] { "Ls" };
 		protected IEnumerable<Log> GetLogs(ICommandRequest request)
 		{
 			var fileHandler = new FileHandler();
@@ -111,7 +135,7 @@ namespace TimeTrackerApp
 			{
 				PrintWithColor.Write(log.DisplayReadable());
 				PrintWithColor.WriteLine(" time: " + log.GetTimeSpan()
-					, background: log.Action == Action.Start ? ConsoleColor.Blue: default);
+					, background: log.Action == Action.Start ? ConsoleColor.Blue : default);
 			}
 			PrintWithColor.WriteLine("Count: " + logs.Count);
 		}
@@ -120,8 +144,8 @@ namespace TimeTrackerApp
 			this.Print(this.GetLogs(request).ToList());
 			return true;
 		}
-	   public virtual bool Execute()
-	   {
+		public virtual bool Execute()
+		{
 			PrintWithColor.WriteLine("Name: ");
 			var request = new CommandRequest()
 			{
@@ -129,54 +153,85 @@ namespace TimeTrackerApp
 			};
 			this.Execute(request);
 			return true;
-	   }
+		}
 	}
-	public class ListActive : List
+	public class Active : List
 	{
-		public override int TimeoutTime => TimeTracker.NormalTimeoutTime;
+		public override int CommandNumber => (int)CommandNumbers.Active;
+		public int TimeoutTime => TimeTracker.NormalTimeoutTime;
+		public override IList<string> Aliases => EmptyList.List; 
 		public override bool Execute()
-	   {
+		{
 			var lines = this.GetLogs(new CommandRequest())
 				.Where(x => x.Action == Action.Start)
 				.ToList();
-			this.Print(lines);
-			return true;
-	   }
-	}
 
-	public class GetTimePerDay : ICommand
+			this.Print(lines);
+			while (lines.Any() && !InteruptableReader.TryReadLine(out string _, this.TimeoutTime))
+			{
+				Console.Clear();
+				this.Print(lines);
+			}
+
+			return true;
+		}
+	}
+	public class Week : Day
 	{
-		public int TimeoutTime => Timeout.Infinite;
+		protected override string Prompt => "Number of weeks: ";
+		public override int CommandNumber => (int)CommandNumbers.Week;
+
+		protected override string GroupBy(Log log)
+		{
+			DateTimeFormatInfo dfi = DateTimeFormatInfo.CurrentInfo;
+			Calendar cal = dfi.Calendar;
+
+			return $"Week: {cal.GetWeekOfYear(DateTimeOffset.FromUnixTimeSeconds(log.StartTimestamp).Date, dfi.CalendarWeekRule, dfi.FirstDayOfWeek)}";
+		}
+	}
+	public class Day : ICommand
+	{
+		public virtual int CommandNumber => (int)CommandNumbers.Day;
+
 		private static int StartNumber => 7;
+		protected virtual string GroupBy(Log log)
+		{
+			return $"{DateTimeOffset.FromUnixTimeSeconds(log.StartTimestamp).Date:MMM-dd}";
+		}
+
+		protected virtual string Prompt => "Number of days: ";
+
+		public IList<string> Aliases => EmptyList.List;
+
 		public bool Execute()
 		{
-			PrintWithColor.WriteLine("Number of days: ");
+			PrintWithColor.WriteLine(this.Prompt);
 			_ = int.TryParse(InteruptableReader.ReadLine(), out int number);
-			number = number == 0 ? StartNumber: number;
+			number = number == 0 ? StartNumber : number;
 
 			var groupedByDay = new FileHandler()
 				.GetAllLogs(new CommandRequest())
-				.GroupBy(x => DateTimeOffset.FromUnixTimeSeconds(x.StartTimestamp).Date)
+				.GroupBy(x => this.GroupBy(x))
 				.TakeLast(number)
 				;
-			foreach(var day in groupedByDay)
+			foreach (var day in groupedByDay)
 			{
 				var groupedByName = day
 					.GroupBy(x => x.Name);
-				foreach(var name in groupedByName)
+				foreach (var name in groupedByName)
 				{
 					var totalTimePerName = TimeSpan.FromMinutes(name
 						.Select(x => x.GetTimeSpan())
 						.Sum(x => x.TotalMinutes));
 
 					PrintWithColor.WriteLine(name.First().Name + " time: " + totalTimePerName
-						, background: name.Any(x => x.Action == Action.Start ) ? ConsoleColor.Blue : default);
+						, background: name.Any(x => x.Action == Action.Start) ? ConsoleColor.Blue : default);
 				}
 				var totalTime = TimeSpan.FromMinutes(day
 						.Select(x => x.GetTimeSpan())
 						.Sum(x => x.TotalMinutes));
 
-				PrintWithColor.WriteLine($"{day.Key:MMM-dd}" + " Total time: " + totalTime
+				PrintWithColor.WriteLine(day.Key + " Total time: " + totalTime
 					, background: day.Any(x => x.Action == Action.Start) ? ConsoleColor.DarkMagenta : ConsoleColor.DarkGreen);
 				PrintWithColor.WriteLine("");
 			}
@@ -186,7 +241,8 @@ namespace TimeTrackerApp
 
 	public class GetTime : ICommand
 	{
-		public int TimeoutTime => Timeout.Infinite;
+		public int CommandNumber => (int)CommandNumbers.GetTime;
+		public IList<string> Aliases => EmptyList.List;
 		public bool Execute()
 		{
 			PrintWithColor.WriteLine("Get time: ");
@@ -197,54 +253,57 @@ namespace TimeTrackerApp
 			{
 				Arg = InteruptableReader.ReadLine(),
 			};
-			var allLogs = fileHandler
-				.GetAllLogs(request);
-			
-			var groupPerNames = allLogs
+
+			var groupPerNames = fileHandler
+				.GetAllLogs(request)
 				.GroupBy(x => x.Name)
 				.OrderByDescending(x => x.Min(m => m.Action))
 				.ThenBy(x => x.Max(x => x.StopTimestamp))
+				.ToList()
 				;
-			foreach(var groupPerName in groupPerNames)
+			foreach (var groupPerName in groupPerNames)
 			{
 				var groupPerDay = groupPerName
-					.GroupBy(x => DateTimeOffset.FromUnixTimeSeconds(x.StartTimestamp).Date);
+					.GroupBy(x => DateTimeOffset.FromUnixTimeSeconds(x.StartTimestamp).Date)
+					.ToList();
 
 				foreach (var group in groupPerDay)
 				{
-					foreach(var log in group)
+					foreach (var log in group)
 					{
 						PrintWithColor.WriteLine(log.DisplayReadable(x => x.Name, x => x.StartTime, x => x.StopTime) + " time: " + log.GetTimeSpan()
 							, background: log.Action == Action.Start ? ConsoleColor.Blue : default);
 					}
 
-					if (groupPerDay.Count() > 1)
+					if (groupPerDay.Count > 1)
 					{
 						var totalTimeForDay = TimeSpan.FromMinutes(group
 							.Select(x => x.GetTimeSpan())
 							.Sum(x => x.TotalMinutes));
 
-						PrintWithColor.WriteLine($"{group.Key:MMM-dd}"+ " Sum: " + totalTimeForDay
+						PrintWithColor.WriteLine($"{group.Key:MMM-dd}" + " Sum: " + totalTimeForDay
 							, background: group.Any(x => x.Action == Action.Start) ? ConsoleColor.DarkMagenta : ConsoleColor.DarkGreen);
 					}
 				}
 
+				var date = groupPerDay.Count > 1 ? "" : $"{groupPerDay[0].Key:MMM-dd} ";
 				var totalTime = TimeSpan.FromMinutes(groupPerName
 					.Select(x => x.GetTimeSpan())
 					.Sum(x => x.TotalMinutes));
-				PrintWithColor.WriteLine("Sum: " + totalTime
+				PrintWithColor.WriteLine(date + "Sum: " + totalTime
 					, background: groupPerName.Any(x => x.Action == Action.Start) ? ConsoleColor.DarkMagenta : ConsoleColor.DarkGreen);
 
 				PrintWithColor.WriteLine("");
 			}
 			return true;
-	   }
+		}
 	}
 
 	public class Rename : ICommand
 	{
-		public int TimeoutTime => Timeout.Infinite;
-		private int number => 99;
+		public int CommandNumber => (int)CommandNumbers.Rename;
+		private int number => 100;
+		public IList<string> Aliases => EmptyList.List;
 		public bool Execute()
 		{
 			var fileHandler = new FileHandler();
@@ -286,8 +345,9 @@ namespace TimeTrackerApp
 	}
 	public class Delete : ICommand
 	{
-		public int TimeoutTime => Timeout.Infinite;
-		private int number => 99;
+		public int CommandNumber => (int)CommandNumbers.Delete;
+		private int number => 100;
+		public IList<string> Aliases => EmptyList.List;
 		public bool Execute()
 		{
 			var fileHandler = new FileHandler();
@@ -299,8 +359,8 @@ namespace TimeTrackerApp
 
 			for (int i = 0; i < Math.Min(number, logs.Count); i++)
 			{
-				PrintWithColor.WriteLine(i + " : " + logs[i].DisplayReadable()
-					, background: logs[i].Action == Action.Start ? ConsoleColor.Blue : default);
+				PrintWithColor.Write(i + " : " + logs[i].DisplayReadable());
+				PrintWithColor.WriteLine(" time: " + logs[i].GetTimeSpan(), background: logs[i].Action == Action.Start ? ConsoleColor.Blue : default);
 			}
 			PrintWithColor.WriteLine("Any key to return.", ConsoleColor.DarkRed);
 			if (int.TryParse(InteruptableReader.ReadLine(), out int index)
@@ -315,24 +375,76 @@ namespace TimeTrackerApp
 	}
 	public class Reset : ICommand
 	{
-		public int TimeoutTime => Timeout.Infinite;
+		public int CommandNumber => (int)CommandNumbers.Reset;
+		public IList<string> Aliases => EmptyList.List;
 		public bool Execute()
-	   {
-		   
-			PrintWithColor.WriteLine("Sure to delete all? type yes to accept");
-			if(Console.ReadLine() == "yes")
+		{
+
+			PrintWithColor.WriteLine("Sure to delete all? type 'yes' to accept");
+			if (Console.ReadLine() == "yes")
 			{
 
 				var fileHandler = new FileHandler();
 				fileHandler.Reset();
 			}
 			return true;
-	   }
+		}
 	}
-	public class RestartRecent : ICommand
+	public class Backup : ICommand
 	{
-		public int TimeoutTime => Timeout.Infinite;
-		static int number => 25;
+		public int CommandNumber => (int)CommandNumbers.Backup;
+		public IList<string> Aliases => EmptyList.List;
+		public bool Execute()
+		{
+			var fileHandler = new FileHandler();
+			var newName = fileHandler.Backup();
+			PrintWithColor.WriteLine("Backup " + newName);
+			return true;
+		}
+	}
+	public class Restore : ICommand
+	{
+		public int CommandNumber => (int)CommandNumbers.Restore;
+
+		public IList<string> Aliases => EmptyList.List;
+		private static int number => 25;
+
+		public bool Execute()
+		{
+			var filehandler = new FileHandler();
+
+			var files = filehandler
+				.GetAllFiles()
+				.Select(x => x.Remove(0, FileHandler.Location.Length))
+				.TakeLast(number)
+				.ToList()
+				;
+
+			PrintWithColor.WriteLine("Restore from:");
+			int maxWidth = files.Max(x => x.Length);
+			for (int i  = 0; i < files.Count; i++)
+			{
+				var padding = new string(' ', (maxWidth - files[i].Length) + 1);
+				PrintWithColor.WriteLine($"{i} : " + String.Format($"{files[i] + padding}|{filehandler.GetFileSize(files[i])/1000,4} KB"));
+			}
+			PrintWithColor.WriteLine("X for cancel", ConsoleColor.DarkRed);
+
+			if (int.TryParse(InteruptableReader.ReadLine(), out int index)
+				&& index < Math.Min(files.Count, number)
+				&& index >= 0
+				)
+			{
+				filehandler.Restore(files[index]);
+			}
+
+			return true;
+		}
+	}
+	public class Restart : ICommand
+	{
+		public int CommandNumber => (int)CommandNumbers.Restart;
+		static int number => 25; 
+		public IList<string> Aliases => EmptyList.List;
 		public bool Execute()
 		{
 			var fileHandler = new FileHandler();
@@ -340,15 +452,15 @@ namespace TimeTrackerApp
 				.GetAllLogs(new CommandRequest())
 				.GroupBy(x => x.Name)
 				.TakeLast(number)
-				.OrderByDescending(x => x.Max( mbox => mbox.StartTimestamp))
+				.OrderByDescending(x => x.Max(mbox => mbox.StartTimestamp))
 				.ToList();
 
-			for(int i = 0; i < Math.Min(logs.Count, number); i++)
+			for (int i = 0; i < Math.Min(logs.Count, number); i++)
 			{
 				PrintWithColor.WriteLine(i + " : " + logs[i].Key);
 			}
-			if(int.TryParse(InteruptableReader.ReadLine(), out int index) 
-				&& index < Math.Min(logs.Count, number) 
+			if (int.TryParse(InteruptableReader.ReadLine(), out int index)
+				&& index < Math.Min(logs.Count, number)
 				&& index >= 0
 				)
 			{
@@ -363,10 +475,11 @@ namespace TimeTrackerApp
 			return true;
 		}
 	}
-	public class CreateNewHistoric : ICommand
+	public class AddNewHistoric : ICommand
 	{
-		public int TimeoutTime => Timeout.Infinite;
-		
+		public IList<string> Aliases => new []{ "Add", "New", "Historic"};
+		public int CommandNumber => (int)CommandNumbers.NewHistoric;
+
 		public bool Execute()
 		{
 			PrintWithColor.WriteLine("Start name: ");
@@ -386,7 +499,7 @@ namespace TimeTrackerApp
 			};
 
 
-			var time = (DateTimeOffset) DateTime.Today.AddHours(3);
+			var time = (DateTimeOffset)DateTime.Today.AddHours(3);
 			var log = new Log
 			{
 				StartTimestamp = time.ToUnixTimeSeconds(),
@@ -394,29 +507,31 @@ namespace TimeTrackerApp
 				Action = Action.Stop,
 				Name = name,
 			};
-			
+
 			var fileHandler = new FileHandler();
 			fileHandler.Create(log);
 			Console.Clear();
 
 			var list = new List();
-			list.Execute(new CommandRequest {Arg = name, ExactSearch = true });
+			list.Execute(new CommandRequest { Arg = name, ExactSearch = true });
 
 			return true;
 		}
 	}
 	public class Merge : ICommand
 	{
-		public int TimeoutTime => Timeout.Infinite;
 		private static int number => 25;
+		public int CommandNumber => (int)CommandNumbers.Merge;
+		public IList<string> Aliases => EmptyList.List;
+
 		public bool Execute()
 		{
 			var fileHandler = new FileHandler();
 			var logs = fileHandler
 				.GetAllLogs(new CommandRequest())
 				.GroupBy(x => x.Name)
-				.TakeLast(number)
 				.OrderByDescending(x => x.Max(mbox => mbox.StartTimestamp))
+				.TakeLast(number)
 				.ToList();
 
 			PrintWithColor.WriteLine("Merge names");
@@ -432,22 +547,24 @@ namespace TimeTrackerApp
 				)
 			{
 				Console.Clear();
+				
 				PrintWithColor.WriteLine(targetIndex.ToString());
+				PrintWithColor.WriteLine("New name: ");
 				for (int i = 0; i < Math.Min(logs.Count, number); i++)
 				{
-					if(i != targetIndex)
+					if (i != targetIndex)
 					{
 						PrintWithColor.WriteLine(i + " : " + logs[i].Key);
 					}
 				}
 
 				if (int.TryParse(InteruptableReader.ReadLine(), out int sourceIndex)
-				&& sourceIndex < Math.Min(logs.Count, number)
-				&& sourceIndex >= 0
+					&& sourceIndex < Math.Min(logs.Count, number)
+					&& sourceIndex >= 0
 				)
 				{
 					fileHandler.Delete(logs[targetIndex]);
-					foreach(var log in logs[targetIndex])
+					foreach (var log in logs[targetIndex])
 					{
 						log.Name = logs[sourceIndex].Key;
 					}
@@ -457,21 +574,89 @@ namespace TimeTrackerApp
 			return true;
 		}
 	}
+	
+	public class Commands : ICommand
+	{
+		public IList<string> Aliases => new[] 
+		{ 
+			"C" ,
+			"Cmd", 
+		};
+		public int CommandNumber => (int)CommandNumbers.Commands;
+
+		public bool Execute()
+		{
+			var commands = CommandCreator.CreateAll();
+			foreach (var command in commands)
+			{
+				PrintWithColor.WriteLine(command.CommandNumber + " " + command.GetType().Name);
+				for(int i = 0; i < command.Aliases.Count; i++)
+				{
+					var line = i == command.Aliases.Count - 1
+						? "└── "
+						: "├── ";
+					PrintWithColor.WriteLine(line + command.Aliases[i]);
+				}
+			}
+			return true;
+		}
+	}
 	public class Invalid : ICommand
 	{
-		public int TimeoutTime => Timeout.Infinite;
+		public IList<string> Aliases => EmptyList.List;
+
+		public int CommandNumber => (int)CommandNumbers.Invalid;
+
 		public bool Execute()
 		{
 			PrintWithColor.WriteLine("Invalid operation");
 			return true;
 		}
 	}
+	public class Meny : ICommand
+	{
+		public int CommandNumber => (int)CommandNumbers.Invalid;
+
+		public IList<string> Aliases => EmptyList.List;
+
+		public bool Execute()
+		{
+			var commands = new[]
+			{
+				typeof(Start),
+				typeof(Stop),
+				typeof(List),
+				typeof(Active),
+				typeof(GetTime),
+				typeof(Day),
+				typeof(Restart),
+				typeof(Commands),
+			};
+
+			foreach(var command in commands.Select(CommandCreator.Create))
+			{
+				PrintWithColor.WriteLine(command.CommandNumber + " : " + command.GetType().Name);
+			}
+			PrintWithColor.WriteLine("X"+ " : " + typeof(Exit).Name);
+
+			return true;
+		}
+	}
+
 	public class Exit : ICommand
 	{
-		public int TimeoutTime => Timeout.Infinite;
+		public int CommandNumber => (int)CommandNumbers.Exit;
+
+		public IList<string> Aliases => new[] {"X", "Q"};
+
 		public bool Execute()
 		{
 			return false;
 		}
+	}
+
+	public static class EmptyList
+	{
+		public static IList<string> List => Array.Empty<string>().ToList();
 	}
 }
