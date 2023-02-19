@@ -134,7 +134,10 @@ namespace TimeTrackerApp
 		}
 		public List<(string, long)> GetAllFiles()
 		{
-			return Directory.GetFiles(Location).ToList();
+			return Directory
+				.GetFiles(Location)
+				.Select(x => (x, this.GetFileSize(x)))
+				.ToList();
 		}
 		public long GetFileSize(string fileName)
 		{
