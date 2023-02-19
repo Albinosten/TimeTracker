@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.IO;
 
 namespace TimeTrackerApp
 {
@@ -17,16 +18,27 @@ namespace TimeTrackerApp
 				.Trim()
 				;
 		}
+		public static string ToTotalHours(this TimeSpan timespan)
+		{
+			return $"{((int)timespan.TotalHours).AddPadding()}:{timespan.Minutes.AddPadding()}:{timespan.Seconds.AddPadding()}";
+		}
+		public static string AddPadding(this int value)
+		{
+			return value.ToString().PadLeft(2, '0');
+		}
 	}
+
 	public interface ICommandRequest 
 	{
 		string Arg { get; set; }
 		bool ExactSearch { get; set; }
+		bool Clear { get; set; }
 	}
 	public interface ICommandWithArg : ICommand
 	{
 		bool Execute(ICommandRequest request);
 	}
+
 	public interface ICommand
 	{
 		bool Execute();
@@ -38,24 +50,19 @@ namespace TimeTrackerApp
 		public static int NormalTimeoutTime => 6 * 1000;
 		static void Main(string[] args)
 		{
-#if DEBUG
-
-#endif
 			Console.Clear();
 			bool run = true;
 			while (run)
 			{
-				CommandCreator.Create(typeof(Meny)).Execute();
-				var command = GetCommand(InteruptableReader.ReadLine());
-				Console.Clear();
-				run = command.Execute();
-				PrintWithColor.WriteLine("*************************************");
+				run = CommandCreator.Create(typeof(Meny)).Execute();
 			}
 		}
-
-		private static ICommand GetCommand(string c)
+	}
+	public static class CommandCreator
+	{
+		public  static ICommand GetCommand(string c)
 		{
-			var types = CommandCreator.CreateAll();
+			var types = CreateAll();
 			foreach (var command in types)
 			{
 				if (c.ToUpper() == command.GetType().Name.ToUpper())
@@ -73,10 +80,12 @@ namespace TimeTrackerApp
 			}
 			return new Invalid();
 		}
-	}
 
-	public static class CommandCreator
-	{
+		public static ICommandWithArg Create<T>()
+			where T : ICommandWithArg
+		{
+			return (ICommandWithArg)Create(typeof(T));
+		}
 		public static ICommand Create(Type type)
 		{
 			return (ICommand)type.GetConstructor(Type.EmptyTypes).Invoke(null);
@@ -86,11 +95,12 @@ namespace TimeTrackerApp
 		{
 			return AppDomain.CurrentDomain.GetAssemblies()
 				.SelectMany(s => s.GetTypes())
-				.Where(x => x != typeof(Meny))
-				.Where(x => x != typeof(Invalid))
+				//.Where(x => x != typeof(Meny))
+				//.Where(x => x != typeof(Invalid))
 				.Where(p => typeof(ICommand).IsAssignableFrom(p))
 				.Where(p => p.IsClass)
 				.Select(type => Create(type))
+				.Where(x => x.CommandNumber > 0)
 				.OrderBy(x => x.CommandNumber)
 				.ToList();
 		}

@@ -7,9 +7,13 @@ namespace TimeTrackerApp
 {
 	public class FileHandler
 	{
+		[Obsolete]
+		private static string location => "";
+#pragma warning disable CS0612 // Type or member is obsolete
+		public static string Location => string.IsNullOrEmpty(location) ? Directory.GetCurrentDirectory() + "/Files/" : location;
+#pragma warning restore CS0612 // Type or member is obsolete
+
 		static string path => Location + name;
-		public static string Location => "";
-		// public static string Location => "C:\\src\\Files\\";
 		static string name => "Log.csv";
 
 		/// <summary>
@@ -25,7 +29,7 @@ namespace TimeTrackerApp
 			}
 			var request = new CommandRequest()
 			{
-				Arg = lines[0].Name,
+				Arg = lines.FirstOrDefault()?.Name ?? "",
 				ExactSearch = true,
 			};
 			var logs = this.GetAllLogs(request);
@@ -127,15 +131,17 @@ namespace TimeTrackerApp
 			file.Close();
 			return newName;
 		}
-		public List<string> GetAllFiles()
+		public List<(string, long)> GetAllFiles()
 		{
-			return Directory.GetFiles(Location).ToList();
+			return Directory.GetFiles(string.IsNullOrEmpty(Location) ? Directory.GetCurrentDirectory() : Location)
+				.Select(x => (x.Remove(0, FileHandler.Location.Length), GetFileSize(x)))
+				.ToList();
 		}
 		public long GetFileSize(string fileName)
 		{
-			if (File.Exists(Location + fileName))
+			if (File.Exists(fileName))
 			{
-				return new FileInfo(Location + fileName).Length;
+				return new FileInfo(fileName).Length;
 			}
 			return 0;
 		}
@@ -147,9 +153,9 @@ namespace TimeTrackerApp
 					.ReadAllLines(Location + restoreFrom)
 					.Select(Log.Parse)
 					.ToList();
-					this.Reset();
-					this.Create(allLines);
-					PrintWithColor.WriteLine("Restored from: " + restoreFrom);
+                this.Reset();
+                this.Create(allLines);
+                PrintWithColor.WriteLine("Restored from: " + restoreFrom);
 			}
 			catch
 			{
