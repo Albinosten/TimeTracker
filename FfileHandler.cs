@@ -14,6 +14,7 @@ namespace TimeTrackerApp
 #pragma warning restore CS0612 // Type or member is obsolete
 
 		static string path => Location + name;
+		// public static string Location => "C:\\src\\Files\\";
 		static string name => "Log.csv";
 
 		/// <summary>
@@ -133,9 +134,7 @@ namespace TimeTrackerApp
 		}
 		public List<(string, long)> GetAllFiles()
 		{
-			return Directory.GetFiles(string.IsNullOrEmpty(Location) ? Directory.GetCurrentDirectory() : Location)
-				.Select(x => (x.Remove(0, FileHandler.Location.Length), GetFileSize(x)))
-				.ToList();
+			return Directory.GetFiles(Location).ToList();
 		}
 		public long GetFileSize(string fileName)
 		{
