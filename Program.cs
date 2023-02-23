@@ -42,19 +42,22 @@ namespace TimeTrackerApp
 	public interface ICommand
 	{
 		bool Execute();
-		int CommandNumber { get; }
+		CommandNumbers CommandNumber { get; }
 		IList<string> Aliases { get; }
 	}
+
+	//TODO: ta in args för location path.
+	//TODO: alla commands kan ta in FileHandler som ett dependency. 
+			//Då behöver man inte definera path i koden och kan byta den utan att behöva kompilera.
+	//TODO användarnamn som args? då kan man ha flera användare för samma logfil.
 	public class TimeTracker
 	{
 		public static int NormalTimeoutTime => 6 * 1000;
 		static void Main(string[] args)
 		{
 			Console.Clear();
-			bool run = true;
-			while (run)
+			while (CommandCreator.Create(typeof(Meny)).Execute())
 			{
-				run = CommandCreator.Create(typeof(Meny)).Execute();
 			}
 		}
 	}
@@ -69,7 +72,7 @@ namespace TimeTrackerApp
 				{
 					return command;
 				}
-				else if (c.ToUpper() == command.CommandNumber.ToString())
+				else if (c.ToUpper() == ((int)command.CommandNumber).ToString())
 				{
 					return command;
 				}
@@ -100,8 +103,8 @@ namespace TimeTrackerApp
 				.Where(p => typeof(ICommand).IsAssignableFrom(p))
 				.Where(p => p.IsClass)
 				.Select(type => Create(type))
-				.Where(x => x.CommandNumber > 0)
-				.OrderBy(x => x.CommandNumber)
+				.Where(x => (int)x.CommandNumber > 0)
+				.OrderBy(x => (int)x.CommandNumber)
 				.ToList();
 		}
 	}

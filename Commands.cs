@@ -8,7 +8,7 @@ namespace TimeTrackerApp
 	public class Start : ICommandWithArg
 	{
 		public IList<string> Aliases => EmptyList.List;
-		public int CommandNumber => (int)CommandNumbers.Start;
+		public CommandNumbers CommandNumber => CommandNumbers.Start;
 
 		public bool Execute(ICommandRequest request)
 		{
@@ -23,8 +23,8 @@ namespace TimeTrackerApp
 			fileHandler.Create(log);
 			Console.Clear();
 
-			var list = CommandCreator.Create<List>();
-			list.Execute(request);
+			var list = CommandCreator.Create<Active>();
+			list.Execute();
 
 			return true;
 		}
@@ -48,7 +48,7 @@ namespace TimeTrackerApp
 	}
 	public class Stop : ICommand
 	{
-		public int CommandNumber => (int)CommandNumbers.Stop;
+		public CommandNumbers CommandNumber => CommandNumbers.Stop;
 		private int number => 100; 
 		public IList<string> Aliases => EmptyList.List;
 		public bool Execute()
@@ -96,7 +96,7 @@ namespace TimeTrackerApp
 	}
 	public class List : ICommandWithArg
 	{
-		public virtual int CommandNumber => (int)CommandNumbers.List;
+		public virtual CommandNumbers CommandNumber => CommandNumbers.List;
 		public virtual IList<string> Aliases => new[] { "Ls" };
 		protected IEnumerable<Log> GetLogs(ICommandRequest request)
 		{
@@ -129,7 +129,7 @@ namespace TimeTrackerApp
 	}
 	public class Active : List
 	{
-		public override int CommandNumber => (int)CommandNumbers.Active;
+		public override CommandNumbers CommandNumber => CommandNumbers.Active;
 		public int TimeoutTime => TimeTracker.NormalTimeoutTime;
 		public override IList<string> Aliases => EmptyList.List; 
 		public override bool Execute()
@@ -152,7 +152,7 @@ namespace TimeTrackerApp
 				}
 				CommandCreator
 					.Create<Meny>()
-					.Execute(new CommandRequest 
+					.Execute(new CommandRequest
 					{ 
 						Arg = input, 
 						Clear = true 
@@ -164,7 +164,7 @@ namespace TimeTrackerApp
 	public class Week : Day
 	{
 		protected override string Prompt => "Number of weeks: ";
-		public override int CommandNumber => (int)CommandNumbers.Week;
+		public override CommandNumbers CommandNumber => CommandNumbers.Week;
 
 		protected override string GroupBy(Log log)
 		{
@@ -176,7 +176,7 @@ namespace TimeTrackerApp
 	}
 	public class Day : ICommand
 	{
-		public virtual int CommandNumber => (int)CommandNumbers.Day;
+		public virtual CommandNumbers CommandNumber => CommandNumbers.Day;
 
 		private static int StartNumber => int.MaxValue;
 		protected virtual string GroupBy(Log log)
@@ -231,7 +231,7 @@ namespace TimeTrackerApp
 
 	public class GetTime : ICommand
 	{
-		public int CommandNumber => (int)CommandNumbers.GetTime;
+		public CommandNumbers CommandNumber => CommandNumbers.GetTime;
 		public IList<string> Aliases => EmptyList.List;
 		public bool Execute()
 		{
@@ -294,7 +294,7 @@ namespace TimeTrackerApp
 
 	public class Rename : ICommand
 	{
-		public int CommandNumber => (int)CommandNumbers.Rename;
+		public CommandNumbers CommandNumber => CommandNumbers.Rename;
 		private int number => 100;
 		public IList<string> Aliases => EmptyList.List;
 		public bool Execute()
@@ -307,7 +307,7 @@ namespace TimeTrackerApp
 				.TakeLast(number)
 				.ToList();
 
-			for (int i = 0; i < Math.Min(number, logs.Count); i++)
+			for (int i = Math.Min(number, logs.Count) - 1; i >= 0; i--)
 			{
 				PrintWithColor.WriteLine(i + " : " + logs[i].Key
 					, background: logs[i].Any(x => x.Action == Action.Start) ? ConsoleColor.Blue : null);
@@ -338,7 +338,7 @@ namespace TimeTrackerApp
 	}
 	public class Delete : ICommand
 	{
-		public int CommandNumber => (int)CommandNumbers.Delete;
+		public CommandNumbers CommandNumber => CommandNumbers.Delete;
 		private int number => 100;
 		public IList<string> Aliases => EmptyList.List;
 		public bool Execute()
@@ -368,7 +368,7 @@ namespace TimeTrackerApp
 	}
 	public class Reset : ICommand
 	{
-		public int CommandNumber => (int)CommandNumbers.Reset;
+		public CommandNumbers CommandNumber => CommandNumbers.Reset;
 		public IList<string> Aliases => EmptyList.List;
 		public bool Execute()
 		{
@@ -383,7 +383,7 @@ namespace TimeTrackerApp
 	}
 	public class Backup : ICommand
 	{
-		public int CommandNumber => (int)CommandNumbers.Backup;
+		public CommandNumbers CommandNumber => CommandNumbers.Backup;
 		public IList<string> Aliases => EmptyList.List;
 		public bool Execute()
 		{
@@ -395,19 +395,21 @@ namespace TimeTrackerApp
 	}
 	public class Restore : ICommand
 	{
-		public int CommandNumber => (int)CommandNumbers.Restore;
+		public CommandNumbers CommandNumber => CommandNumbers.Restore;
 
 		public IList<string> Aliases => EmptyList.List;
-		private static int number => 25;
+		private static int number => 20;
 
 		public bool Execute()
 		{
 			var filehandler = new FileHandler();
 
-			var files = filehandler
-				.GetAllFiles()
+			var allFiles = filehandler
+				.GetAllFiles();
+			var files= allFiles
+				.Item1
 				.OrderByDescending(x => x)
-				.TakeLast(number)
+				.Take(number)
 				.ToList()
 				;
 
@@ -424,11 +426,13 @@ namespace TimeTrackerApp
 				PrintWithColor.WriteLine($"{i,2} │ " + String.Format($"{fileName}│{files[i].Item2/1000,4} KB"));
 			}
 
+			var totalSize = (allFiles.Item2/1000).ToString();
 			var size = files.Sum(x => x.Item2 / 1000).ToString();
 
 			PrintWithColor.WriteLine("───┴" + new string('─', width) + "┴"+ new string('─', 7));
-			PrintWithColor.WriteLine("Total size:" + new string(' ', width - size.Length - 1) + size + "KB");
-			
+			PrintWithColor.WriteLine("Size:" + new string(' ', width - size.Length + 5) + size + "KB");
+			PrintWithColor.WriteLine("Total size:" + new string(' ', width - totalSize.Length - 1) + totalSize + "KB");
+
 			PrintWithColor.WriteLine("");
 			PrintWithColor.WriteLine("X for cancel", ConsoleColor.DarkRed);
 
@@ -445,8 +449,8 @@ namespace TimeTrackerApp
 	}
 	public class Restart : ICommand
 	{
-		public int CommandNumber => (int)CommandNumbers.Restart;
-		static int number => 25; 
+		public CommandNumbers CommandNumber => CommandNumbers.Restart;
+		static int number => int.MaxValue;
 		public IList<string> Aliases => EmptyList.List;
 		public bool Execute()
 		{
@@ -454,11 +458,11 @@ namespace TimeTrackerApp
 			var logs = fileHandler
 				.GetAllLogs(new CommandRequest())
 				.GroupBy(x => x.Name)
-				.TakeLast(number)
 				.OrderByDescending(x => x.Max(mbox => mbox.StartTimestamp))
+				.Take(number)
 				.ToList();
 
-			for (int i = 0; i < Math.Min(logs.Count, number); i++)
+			for (int i = Math.Min(logs.Count, number) - 1; i >= 0; i--)
 			{
 				PrintWithColor.WriteLine(i + " : " + logs[i].Key);
 			}
@@ -481,7 +485,7 @@ namespace TimeTrackerApp
 	public class AddNewHistoric : ICommand
 	{
 		public IList<string> Aliases => new []{ "Add", "New", "Historic"};
-		public int CommandNumber => (int)CommandNumbers.NewHistoric;
+		public CommandNumbers CommandNumber => CommandNumbers.NewHistoric;
 
 		public bool Execute()
 		{
@@ -523,8 +527,8 @@ namespace TimeTrackerApp
 	}
 	public class MergeNames : ICommand
 	{
-		private static int number => 25;
-		public int CommandNumber => (int)CommandNumbers.Merge;
+		private static int number => int.MaxValue;
+		public CommandNumbers CommandNumber => CommandNumbers.Merge;
 		public IList<string> Aliases => new[] { "Merge" };
 
 		public bool Execute()
@@ -534,12 +538,12 @@ namespace TimeTrackerApp
 				.GetAllLogs(new CommandRequest())
 				.GroupBy(x => x.Name)
 				.OrderByDescending(x => x.Max(mbox => mbox.StartTimestamp))
-				.TakeLast(number)
+				.Take(number)
 				.ToList();
 
 			PrintWithColor.WriteLine("Merge names");
 
-			for (int i = 0; i < Math.Min(logs.Count, number); i++)
+			for (int i = Math.Min(logs.Count, number) - 1; i >= 0 ; i--)
 			{
 				PrintWithColor.WriteLine(i + " : " + logs[i].Key);
 			}
@@ -553,7 +557,7 @@ namespace TimeTrackerApp
 				
 				PrintWithColor.WriteLine(targetIndex.ToString());
 				PrintWithColor.WriteLine("New name: ");
-				for (int i = 0; i < Math.Min(logs.Count, number); i++)
+				for (int i = Math.Min(logs.Count, number) - 1; i >= 0; i--)
 				{
 					if (i != targetIndex)
 					{
@@ -585,14 +589,15 @@ namespace TimeTrackerApp
 			"C" ,
 			"Cmd", 
 		};
-		public int CommandNumber => (int)CommandNumbers.Commands;
+		public CommandNumbers CommandNumber => CommandNumbers.Commands;
 
 		public bool Execute()
 		{
 			var commands = CommandCreator.CreateAll();
 			foreach (var command in commands)
 			{
-				PrintWithColor.WriteLine(command.CommandNumber + " " + command.GetType().Name);
+				var helptext = command.CommandNumber.GetHelpText();
+				PrintWithColor.WriteLine((int)command.CommandNumber + " " + command.GetType().Name + (!string.IsNullOrEmpty(helptext) ? ": " + helptext : string.Empty));
 				for(int i = 0; i < command.Aliases.Count; i++)
 				{
 					var line = i == command.Aliases.Count - 1
@@ -608,7 +613,7 @@ namespace TimeTrackerApp
 	{
 		public IList<string> Aliases => EmptyList.List;
 
-		public int CommandNumber => (int)CommandNumbers.Invalid;
+		public CommandNumbers CommandNumber => CommandNumbers.Invalid;
 
 		public bool Execute()
 		{
@@ -618,7 +623,7 @@ namespace TimeTrackerApp
 	}
 	public class MenyPrinter : ICommand
 	{
-		public int CommandNumber => (int)CommandNumbers.Invalid;
+		public CommandNumbers CommandNumber => CommandNumbers.Invalid;
 
 		public IList<string> Aliases => throw new NotImplementedException();
 
@@ -640,7 +645,7 @@ namespace TimeTrackerApp
 			PrintWithColor.WriteLine("*************************************");
 			foreach (var command in commands.Select(CommandCreator.Create))
 			{
-				PrintWithColor.WriteLine(command.CommandNumber + " : " + command.GetType().Name);
+				PrintWithColor.WriteLine((int)command.CommandNumber + " : " + command.GetType().Name);
 			}
 			PrintWithColor.WriteLine("X" + " : " + typeof(Exit).Name);
 			return true;
@@ -648,7 +653,7 @@ namespace TimeTrackerApp
 	}
 	public class Meny : ICommandWithArg
 	{
-		public int CommandNumber => (int)CommandNumbers.Invalid;
+		public CommandNumbers CommandNumber => CommandNumbers.Invalid;
 
 		public IList<string> Aliases => EmptyList.List;
 		
@@ -669,11 +674,26 @@ namespace TimeTrackerApp
 			return nextCommand.Execute();
 		}
 	}
-	public class EditTime : ICommand
-	{
-		public int CommandNumber => (int)CommandNumbers.EditTime;
 
-		public IList<string> Aliases => new[] { "Edit" };
+	public class EditEndTime : EditStartTime
+	{
+		public override CommandNumbers CommandNumber => CommandNumbers.EditEndTime;
+
+		public override IList<string> Aliases => new[] { "EditEnd", "EEnd", };
+		protected override  void EditTime(Log log, int value)
+		{
+			log.StopTimestamp += value;
+		}
+		protected override bool Filter(Log log)
+		{
+			return log.StopTimestamp != decimal.Zero;
+		}
+	}
+	public class EditStartTime : ICommand
+	{
+		public virtual CommandNumbers CommandNumber => CommandNumbers.EditStartTime;
+
+		public virtual IList<string> Aliases => new[] { "EditStart", "EStart", "Edit", };
 		private int number => 100;
 		public bool Execute()
 		{
@@ -684,11 +704,12 @@ namespace TimeTrackerApp
 			var fileHandler = new FileHandler();
 			var logs = fileHandler
 				.GetAllLogs(request)
+				.Where(Filter)
 				.TakeLast(number)
 				.Reverse()
 				.ToList()
 				;
-			for (int i = Math.Min(logs.Count, number) -1; i >= 0; i--)
+			for (int i = Math.Min(logs.Count, number) - 1; i >= 0; i--)
 			{
 				PrintWithColorHelper.PrintLog(logs[i], i + " : ");
 			}
@@ -706,18 +727,26 @@ namespace TimeTrackerApp
 				{
 					var log = logs[index];
 					fileHandler.Delete(log);
-					log.StartTimestamp -= (value * 60);
+					this.EditTime(log, (value * 60));
 					fileHandler.Create(log);
 				}
 			}
 
 			return true;
 		}
+		protected virtual bool Filter(Log log)
+		{
+			return true;
+		}
+		protected virtual void EditTime(Log log, int value)
+		{
+			log.StartTimestamp -= value;
+		}
 	}
 
 	public class Exit : ICommand
 	{
-		public int CommandNumber => (int)CommandNumbers.Exit;
+		public CommandNumbers CommandNumber => CommandNumbers.Exit;
 
 		public IList<string> Aliases => new[] {"X", "Q"};
 
@@ -729,7 +758,7 @@ namespace TimeTrackerApp
 	public class SquishWeek : ICommand
 	{
 		//Squish all entries on this week into one per name.
-		public int CommandNumber => (int)CommandNumbers.Invalid;
+		public CommandNumbers CommandNumber => CommandNumbers.Invalid;
 
 		public IList<string> Aliases => EmptyList.List;
 
@@ -741,7 +770,7 @@ namespace TimeTrackerApp
 	}
 	public class SquishDay : ICommand
 	{
-		public int CommandNumber => (int)CommandNumbers.Invalid;
+		public CommandNumbers CommandNumber => CommandNumbers.Invalid;
 
 		public IList<string> Aliases => EmptyList.List;
 

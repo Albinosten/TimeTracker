@@ -14,7 +14,6 @@ namespace TimeTrackerApp
 #pragma warning restore CS0612 // Type or member is obsolete
 
 		static string path => Location + name;
-		// public static string Location => "C:\\src\\Files\\";
 		static string name => "Log.csv";
 
 		/// <summary>
@@ -34,11 +33,11 @@ namespace TimeTrackerApp
 				ExactSearch = true,
 			};
 			var logs = this.GetAllLogs(request);
-			
+
 			var file = File.Open(path, FileMode.Append);
 			var streamWriter = new StreamWriter(file);
 
-			foreach(var line in lines)
+			foreach (var line in lines)
 			{
 				streamWriter.WriteLine(line);
 			}
@@ -84,7 +83,7 @@ namespace TimeTrackerApp
 		}
 		public IList<string> GetAllLines(ICommandRequest request)
 		{
-			if(!File.Exists(path))
+			if (!File.Exists(path))
 			{
 				return new List<string>();
 			}
@@ -92,11 +91,11 @@ namespace TimeTrackerApp
 				.Where(x => Filter(request, x))
 				.ToList();
 		}
-		private static bool Filter(ICommandRequest request, string line) 
+		private static bool Filter(ICommandRequest request, string line)
 		{
-			if (!string.IsNullOrEmpty(request.Arg)) 
+			if (!string.IsNullOrEmpty(request.Arg))
 			{
-				if (request.ExactSearch) 
+				if (request.ExactSearch)
 				{
 					return Log.Parse(line).Name.ToUpper() == request.Arg.ToUpper();
 				}
@@ -106,20 +105,20 @@ namespace TimeTrackerApp
 		}
 		public void Reset()
 		{
-			if(File.Exists(path))
+			if (File.Exists(path))
 			{
 				File.Delete(path);
 			}
 		}
 		public string Backup()
 		{
-			var newName = Location +  "Log " + $"{DateTimeOffset.Now.LocalDateTime:yyyy-MM-dd HH-mm-ss}" +  ".csv";
+			var newName = Location + "Log " + $"{DateTimeOffset.Now.LocalDateTime:yyyy-MM-dd HH-mm-ss}" + ".csv";
 			if (!File.Exists(newName))
 			{
 				File.Create(newName).Close();
 			}
 			var allRows = this.GetAllLines(new CommandRequest());
-			
+
 			var file = File.Open(newName, FileMode.Append);
 			var streamWriter = new StreamWriter(file);
 
@@ -132,12 +131,12 @@ namespace TimeTrackerApp
 			file.Close();
 			return newName;
 		}
-		public List<(string, long)> GetAllFiles()
+		public (List<(string, long)>, long) GetAllFiles()
 		{
-			return Directory
-				.GetFiles(Location)
-				.Select(x => (x, this.GetFileSize(x)))
+			var files = Directory.GetFiles(Location)
+				.Select(x => (x.Remove(0, FileHandler.Location.Length), GetFileSize(x)))
 				.ToList();
+			return (files, files.Sum(x => x.Item2));
 		}
 		public long GetFileSize(string fileName)
 		{
@@ -155,9 +154,9 @@ namespace TimeTrackerApp
 					.ReadAllLines(Location + restoreFrom)
 					.Select(Log.Parse)
 					.ToList();
-                this.Reset();
-                this.Create(allLines);
-                PrintWithColor.WriteLine("Restored from: " + restoreFrom);
+				this.Reset();
+				this.Create(allLines);
+				PrintWithColor.WriteLine("Restored from: " + restoreFrom);
 			}
 			catch
 			{
