@@ -154,8 +154,7 @@ namespace TimeTrackerApp
 					.Create<Meny>()
 					.Execute(new CommandRequest
 					{ 
-						Arg = input, 
-						Clear = true 
+						Arg = input,
 					});
 			}
 			return true;
@@ -533,9 +532,10 @@ namespace TimeTrackerApp
 
 		public bool Execute()
 		{
+			PrintWithColor.WriteLine("Name");
 			var fileHandler = new FileHandler();
 			var logs = fileHandler
-				.GetAllLogs(new CommandRequest())
+				.GetAllLogs(new CommandRequest { Arg = InteruptableReader.ReadLine()})
 				.GroupBy(x => x.Name)
 				.OrderByDescending(x => x.Max(mbox => mbox.StartTimestamp))
 				.Take(number)
@@ -660,16 +660,13 @@ namespace TimeTrackerApp
 		public bool Execute()
 		{	
 			CommandCreator.Create(typeof(MenyPrinter)).Execute();
-			return this.Execute(new CommandRequest { Arg = InteruptableReader.ReadLine(), Clear = true });
+			return this.Execute(new CommandRequest { Arg = InteruptableReader.ReadLine() });
 		}
 
 		public bool Execute(ICommandRequest request)
 		{
 			var nextCommand = CommandCreator.GetCommand(request.Arg);
-			if (request.Clear)
-			{
-				Console.Clear();
-			}
+			Console.Clear();
 
 			return nextCommand.Execute();
 		}

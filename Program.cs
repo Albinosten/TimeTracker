@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.IO;
-
 namespace TimeTrackerApp
 {
 	public static class Extension
@@ -32,7 +30,7 @@ namespace TimeTrackerApp
 	{
 		string Arg { get; set; }
 		bool ExactSearch { get; set; }
-		bool Clear { get; set; }
+		//bool Clear { get; set; }
 	}
 	public interface ICommandWithArg : ICommand
 	{
@@ -50,6 +48,7 @@ namespace TimeTrackerApp
 	//TODO: alla commands kan ta in FileHandler som ett dependency. 
 			//Då behöver man inte definera path i koden och kan byta den utan att behöva kompilera.
 	//TODO användarnamn som args? då kan man ha flera användare för samma logfil.
+	//TODO Taggar på loggar. för att kunna få tid per tagg
 	public class TimeTracker
 	{
 		public static int NormalTimeoutTime => 6 * 1000;
@@ -98,8 +97,6 @@ namespace TimeTrackerApp
 		{
 			return AppDomain.CurrentDomain.GetAssemblies()
 				.SelectMany(s => s.GetTypes())
-				//.Where(x => x != typeof(Meny))
-				//.Where(x => x != typeof(Invalid))
 				.Where(p => typeof(ICommand).IsAssignableFrom(p))
 				.Where(p => p.IsClass)
 				.Select(type => Create(type))

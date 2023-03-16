@@ -29,7 +29,7 @@ namespace TimeTrackerApp
 		public static string GetHelpText(this CommandNumbers command) => command switch
 		{
 			CommandNumbers.Invalid => "",
-			CommandNumbers.Start => "",//"Start a new log",
+			CommandNumbers.Start => "Start a new log",
 			CommandNumbers.Stop => "Stop logs. All by default",
 			CommandNumbers.List => "List all logs",
 			CommandNumbers.Active => "Show all ongoing logs",
@@ -48,7 +48,7 @@ namespace TimeTrackerApp
 			CommandNumbers.Delete => "Delete a log entry",
 			CommandNumbers.Reset => "Reset logfile and alla data",
 			CommandNumbers.Exit => "Close app",
-			_ => "",
+			_ => throw new System.NotImplementedException(),
 		};
 	}
 }
